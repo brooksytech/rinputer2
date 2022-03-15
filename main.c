@@ -25,9 +25,55 @@ struct rinputer_device
 void *worker(void *data)
 {
 	struct rinputer_device *my_device = (struct rinputer_device*)data;
+	printf("%s = fd%d\n", my_device->path, my_device->infd);
+	
+	my_device->isUsed = 0;
 
-	printf("Inside thread, we are doing %s\n", my_device->path);
+	// we only do gamepaddish devices, sort out everything else
+	int useful = 0;
+	int touchscreen = 0;
+	char types[EV_MAX];
+	char codes[KEY_MAX/8 + 1];
+	
+	memset(types, 0, EV_MAX);
+	memset(codes, 0, sizeof(codes));
+	ioctl(my_device->infd, EVIOCGBIT(0, EV_MAX), &types);
+	
+	for(int i = 0; i < EV_MAX; i++)
+	{
+		if((types[0] >> i) & 1)
+		{
+			switch(i)
+			{
+				case EV_KEY:
+					//printf("fd%d key event\n", my_device->infd);
+					ioctl(my_device->infd, EVIOCGBIT(EV_KEY, sizeof(codes)), &codes);
+					
+					// dividing by 8 because all values
+					// are stored as bits, not bytes
+					if((codes[BTN_SOUTH / 8]) & 1)
+						useful = 1;
 
+					// technically rounds down to check for
+					// anything between 0x148 to 0x14f
+					// but it works out in our favour
+					// anyway
+					if(codes[BTN_TOUCH / 8])
+						touchscreen = 1;
+					break;
+				case EV_ABS:
+					printf("fd%d abs event\n", my_device->infd);
+					ioctl(my_device->infd, EVIOCGBIT(EV_ABS, sizeof(codes)), &codes);
+					if((codes[ABS_X / 8]) & 1)
+						useful = 1;
+					break;
+			}
+		}
+	}
+	if(useful == 1 && touchscreen == 0)
+		printf("fd%d deemed useful\n", my_device->infd);
+
+	close(my_device->infd);
 	free(data);
 	return NULL;
 }
@@ -53,9 +99,10 @@ int rescan_devices(struct rinputer_device *head)
 		if(ioctl(tmpfd, EVIOCGNAME(32), name) < 0)
 			continue;
 
-		printf("Found potential input device: %s\n", name);
+		//printf("Found potential input device: %s\n", name);
 		tmpdev = calloc(1, sizeof(struct rinputer_device));
 		tmpdev->path = malloc(strlen(dev) + 1);
+		tmpdev->infd = tmpfd;
 		strcpy(tmpdev->path, dev);
 		tmpdev->next = head->next;
 		head->next = tmpdev;
