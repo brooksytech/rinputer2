@@ -21,7 +21,6 @@ struct rinputer_device
 	char *path;
 	char *name;
 	int infd;
-	int isUsed;
 	pthread_t thread;
 	struct rinputer_device *next;
 };
@@ -59,8 +58,6 @@ void *worker(void *data)
 	struct rinputer_device *my_device = (struct rinputer_device*)data;
 	int min = 0; // to be filled in later
 	int max = 0;
-
-	my_device->isUsed = 0;
 
 	// we only do gamepaddish devices, sort out everything else
 	int useful = 0;
@@ -199,7 +196,6 @@ int main(void)
 {
 	int ret;
 	struct rinputer_device *head = malloc(sizeof(struct rinputer_device));
-	head->isUsed = 0;
 	head->next = 0;
 
 	outfd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
