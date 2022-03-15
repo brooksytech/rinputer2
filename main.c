@@ -13,6 +13,9 @@
 
 int outfd = -1;
 
+static int abs_top = 1024;
+static int abs_bot = -1024;
+
 struct rinputer_device
 {
 	char *path;
@@ -22,6 +25,11 @@ struct rinputer_device
 	pthread_t thread;
 	struct rinputer_device *next;
 };
+
+int map(int x, int in_min, int in_max, int out_min, int out_max)
+{
+	return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
 
 void emit(int type, int code, int value)
 {
@@ -40,10 +48,18 @@ void emit(int type, int code, int value)
 	write(outfd, &ev, sizeof(ev));
 }
 
+void emit_abs(signed int min, signed int max, int code, int value)
+{
+	int newval = map(value, min, max, abs_bot, abs_top);
+	emit(EV_ABS, code, newval);
+}
+
 void *worker(void *data)
 {
 	struct rinputer_device *my_device = (struct rinputer_device*)data;
-	
+	int min = 0; // to be filled in later
+	int max = 0;
+
 	my_device->isUsed = 0;
 
 	// we only do gamepaddish devices, sort out everything else
@@ -81,6 +97,13 @@ void *worker(void *data)
 					ioctl(my_device->infd, EVIOCGBIT(EV_ABS, sizeof(codes)), &codes);
 					if((codes[ABS_X / 8]) & 1)
 						useful = 1;
+
+					struct input_absinfo tmp;
+					ioctl(my_device->infd, EVIOCGABS(ABS_X), &tmp);
+
+					min = tmp.minimum;
+					max = tmp.maximum;
+
 					break;
 			}
 		}
@@ -101,7 +124,10 @@ void *worker(void *data)
 		{
 			for(i = 0; i < rd / sizeof(struct input_event) * 4; i++)
 			{
-				emit(ev[i].type, ev[i].code, ev[i].value);
+				if(ev[i].type == EV_ABS)
+					emit_abs(min, max, ev[i].code, ev[i].value);
+				else
+					emit(ev[i].type, ev[i].code, ev[i].value);
 			}
 		}
 	}
@@ -151,6 +177,22 @@ int rescan_devices(struct rinputer_device *head)
 	return 0;
 }
 
+void setup_abs(int fd, unsigned int chan)
+{
+	ioctl(fd, UI_SET_ABSBIT, chan);
+
+	struct uinput_abs_setup tmp =
+	{
+		.code = chan,
+		.absinfo = {
+			.minimum = abs_bot,
+			.maximum = abs_top
+		}
+	};
+
+	ioctl(fd, UI_ABS_SETUP, &tmp);
+}
+
 int main(void)
 {
 	int ret;
@@ -188,11 +230,11 @@ int main(void)
 	ioctl(outfd, UI_SET_KEYBIT, BTN_MODE);		// menu
 
 	ioctl(outfd, UI_SET_EVBIT, EV_ABS);
-	
-	//setup_abs(outfd, analfd, ABS_X);
-	//setup_abs(outfd, analfd, ABS_Y);
-	//setup_abs(outfd, analfd, ABS_RX);
-	//setup_abs(outfd, analfd, ABS_RY);
+
+	setup_abs(outfd, ABS_X);
+	setup_abs(outfd, ABS_Y);
+	setup_abs(outfd, ABS_RX);
+	setup_abs(outfd, ABS_RY);
 
 	// maybe we should pretend to be xbox gamepad?
 	memset(&usetup, 0, sizeof(usetup));
