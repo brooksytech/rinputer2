@@ -114,6 +114,8 @@ void *worker(void *data)
 		goto out;
 
 
+	ioctl(my_device->infd, EVIOCGRAB, 1);
+
 	int rd = 0;
 	int i = 0;
 	struct input_event ev[4];
