@@ -40,38 +40,27 @@ void attach_node(struct rinputer_device *head, struct rinputer_device *new)
 
 int rescan_devices(struct rinputer_device *head)
 {
-	DIR *d;
-	struct dirent *ent;
-	char *wholePath;
 	struct rinputer_device *tmpdev;
+	char dev[20];
+	char name[33];
+	name[32] = '\0';
+	int tmpfd;
 
-	d = opendir("/dev/input/by-path/");
-	if(d)
+	for(int i = 0; i < 64; i++)
 	{
-		while((ent = readdir(d)) != NULL)
-		{
-			if(ent->d_type == DT_CHR || ent->d_type == DT_LNK)
-			{
-				printf("Found potential input device: %s\n", ent->d_name);
-				
-				tmpdev = calloc(1, sizeof(struct rinputer_device));
+		sprintf(dev, "/dev/input/event%d", i);
+		tmpfd = open(dev, O_RDONLY);
+		if(ioctl(tmpfd, EVIOCGNAME(32), name) < 0)
+			continue;
 
-				tmpdev->path = malloc(strlen(ent->d_name) + strlen("/dev/input/by-path/"));
-				sprintf(tmpdev->path, "/dev/input/by-path/%s", ent->d_name);
-				
-				tmpdev->next = head->next;
-				head->next = tmpdev;
-
-				pthread_create(&tmpdev->thread, NULL, worker, tmpdev);
-			}
-		}
+		printf("Found potential input device: %s\n", name);
+		tmpdev = calloc(1, sizeof(struct rinputer_device));
+		tmpdev->path = malloc(strlen(dev) + 1);
+		strcpy(tmpdev->path, dev);
+		tmpdev->next = head->next;
+		head->next = tmpdev;
+		pthread_create(&tmpdev->thread, NULL, worker, tmpdev);
 	}
-	else
-	{
-		perror("Failed opening /dev/input/by-path");
-		return 1;
-	}
-	free(d);
 	return 0;
 }
 
