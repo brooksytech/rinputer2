@@ -16,6 +16,7 @@ int outfd;
 struct rinputer_device
 {
 	char *path;
+	char *name;
 	int infd;
 	int isUsed;
 	pthread_t thread;
@@ -25,7 +26,6 @@ struct rinputer_device
 void *worker(void *data)
 {
 	struct rinputer_device *my_device = (struct rinputer_device*)data;
-	printf("%s = fd%d\n", my_device->path, my_device->infd);
 	
 	my_device->isUsed = 0;
 
@@ -46,7 +46,6 @@ void *worker(void *data)
 			switch(i)
 			{
 				case EV_KEY:
-					//printf("fd%d key event\n", my_device->infd);
 					ioctl(my_device->infd, EVIOCGBIT(EV_KEY, sizeof(codes)), &codes);
 					
 					// dividing by 8 because all values
@@ -62,7 +61,6 @@ void *worker(void *data)
 						touchscreen = 1;
 					break;
 				case EV_ABS:
-					printf("fd%d abs event\n", my_device->infd);
 					ioctl(my_device->infd, EVIOCGBIT(EV_ABS, sizeof(codes)), &codes);
 					if((codes[ABS_X / 8]) & 1)
 						useful = 1;
@@ -71,7 +69,7 @@ void *worker(void *data)
 		}
 	}
 	if(useful == 1 && touchscreen == 0)
-		printf("fd%d deemed useful\n", my_device->infd);
+		printf("device \"%s\" deemed useful \n", my_device->name);
 
 	close(my_device->infd);
 	free(data);
@@ -99,11 +97,13 @@ int rescan_devices(struct rinputer_device *head)
 		if(ioctl(tmpfd, EVIOCGNAME(32), name) < 0)
 			continue;
 
-		//printf("Found potential input device: %s\n", name);
+		printf("Found potential input device: %s\n", name);
 		tmpdev = calloc(1, sizeof(struct rinputer_device));
 		tmpdev->path = malloc(strlen(dev) + 1);
-		tmpdev->infd = tmpfd;
 		strcpy(tmpdev->path, dev);
+		tmpdev->name = malloc(strlen(name) + 1);
+		strcpy(tmpdev->name, name);
+		tmpdev->infd = tmpfd;
 		tmpdev->next = head->next;
 		head->next = tmpdev;
 		pthread_create(&tmpdev->thread, NULL, worker, tmpdev);
