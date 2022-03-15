@@ -70,7 +70,12 @@ void *worker(void *data)
 	}
 	if(useful == 1 && touchscreen == 0)
 		printf("device \"%s\" deemed useful \n", my_device->name);
+	else
+		goto out;
 
+	// reading input device and emitting events goes here
+
+out:
 	close(my_device->infd);
 	free(data);
 	return NULL;
