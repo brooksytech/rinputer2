@@ -11,7 +11,7 @@
 #include <dirent.h>
 #include <errno.h>
 
-int outfd;
+int outfd = -1;
 
 struct rinputer_device
 {
@@ -22,6 +22,23 @@ struct rinputer_device
 	pthread_t thread;
 	struct rinputer_device *next;
 };
+
+void emit(int type, int code, int value)
+{
+	if(outfd < 0)
+		return;
+
+	struct input_event ev;
+
+	ev.type = type;
+	ev.code = code;
+	ev.value = value;
+
+	ev.time.tv_sec = 0;
+	ev.time.tv_usec = 0;
+
+	write(outfd, &ev, sizeof(ev));
+}
 
 void *worker(void *data)
 {
@@ -73,7 +90,21 @@ void *worker(void *data)
 	else
 		goto out;
 
-	// reading input device and emitting events goes here
+
+	int rd = 0;
+	int i = 0;
+	struct input_event ev[4];
+	while(1)
+	{
+		rd = read(my_device->infd, ev, sizeof(struct input_event) * 4);
+		if(rd > 0)
+		{
+			for(i = 0; i < rd / sizeof(struct input_event) * 4; i++)
+			{
+				emit(ev[i].type, ev[i].code, ev[i].value);
+			}
+		}
+	}
 
 out:
 	close(my_device->infd);
@@ -102,6 +133,10 @@ int rescan_devices(struct rinputer_device *head)
 		if(ioctl(tmpfd, EVIOCGNAME(32), name) < 0)
 			continue;
 
+		// let's not make a loop
+		if(strncmp("Rinputer", name, 8) == 0)
+			continue;
+
 		printf("Found potential input device: %s\n", name);
 		tmpdev = calloc(1, sizeof(struct rinputer_device));
 		tmpdev->path = malloc(strlen(dev) + 1);
@@ -123,7 +158,58 @@ int main(void)
 	head->isUsed = 0;
 	head->next = 0;
 
+	outfd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+	if(outfd < 0)
+		perror("Error opening /dev/uinput");
+
+	struct uinput_setup usetup;
+
+	ioctl(outfd, UI_SET_EVBIT, EV_KEY);
+
+	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_UP);	// dpad up
+	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_DOWN);	// dpad down
+	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_LEFT);	// dpad left
+	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_RIGHT);	// dpad right
+
+	ioctl(outfd, UI_SET_KEYBIT, BTN_NORTH);		// x
+	ioctl(outfd, UI_SET_KEYBIT, BTN_SOUTH);		// b
+	ioctl(outfd, UI_SET_KEYBIT, BTN_WEST);		// y
+	ioctl(outfd, UI_SET_KEYBIT, BTN_EAST);		// a
+
+	ioctl(outfd, UI_SET_KEYBIT, BTN_TL);		// L1
+	ioctl(outfd, UI_SET_KEYBIT, BTN_TR);		// R1
+	
+	ioctl(outfd, UI_SET_KEYBIT, BTN_TR2);		// L2
+	ioctl(outfd, UI_SET_KEYBIT, BTN_TL2);		// R2
+
+	ioctl(outfd, UI_SET_KEYBIT, BTN_SELECT);
+	ioctl(outfd, UI_SET_KEYBIT, BTN_START);
+
+	ioctl(outfd, UI_SET_KEYBIT, BTN_MODE);		// menu
+
+	ioctl(outfd, UI_SET_EVBIT, EV_ABS);
+	
+	//setup_abs(outfd, analfd, ABS_X);
+	//setup_abs(outfd, analfd, ABS_Y);
+	//setup_abs(outfd, analfd, ABS_RX);
+	//setup_abs(outfd, analfd, ABS_RY);
+
+	// maybe we should pretend to be xbox gamepad?
+	memset(&usetup, 0, sizeof(usetup));
+	usetup.id.bustype = BUS_USB;
+	usetup.id.vendor = 0x1234;
+	usetup.id.product = 0x5678;
+	strcpy(usetup.name, "Rinputer");
+
+	ioctl(outfd, UI_DEV_SETUP, &usetup);
+	ioctl(outfd, UI_DEV_CREATE);
+
 	ret = rescan_devices(head);
 	if(ret)
 		return 1;
+
+	while(1)
+		sleep(10); // rescanning goes here
+
+	return 0;
 }
