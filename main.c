@@ -105,13 +105,17 @@ void *worker(void *data)
 			}
 		}
 	}
+
+	// we shouldn't open same device multiple times
+	// or if anyone else grabs it
+	if(ioctl(my_device->infd, EVIOCGRAB, 1))
+		goto out;
+
 	if(useful == 1 && touchscreen == 0)
 		printf("device \"%s\" deemed useful \n", my_device->name);
 	else
 		goto out;
 
-
-	ioctl(my_device->infd, EVIOCGRAB, 1);
 
 	int rd = 0;
 	int i = 0;
@@ -155,6 +159,14 @@ int rescan_devices(struct rinputer_device *head)
 	{
 		sprintf(dev, "/dev/input/event%d", i);
 		tmpfd = open(dev, O_RDONLY);
+		if(tmpfd == -1)
+		{
+			if(errno == ENOENT)
+				return 0; // no more devices
+			else
+				perror("Failed opening device\n");
+
+		}
 		if(ioctl(tmpfd, EVIOCGNAME(32), name) < 0)
 			continue;
 
@@ -162,7 +174,6 @@ int rescan_devices(struct rinputer_device *head)
 		if(strncmp("Rinputer", name, 8) == 0)
 			continue;
 
-		printf("Found potential input device: %s\n", name);
 		tmpdev = calloc(1, sizeof(struct rinputer_device));
 		tmpdev->path = malloc(strlen(dev) + 1);
 		strcpy(tmpdev->path, dev);
@@ -194,7 +205,7 @@ void setup_abs(int fd, unsigned int chan)
 
 int main(void)
 {
-	int ret;
+	int ret = 0;
 	struct rinputer_device *head = malloc(sizeof(struct rinputer_device));
 	head->next = 0;
 
@@ -244,12 +255,11 @@ int main(void)
 	ioctl(outfd, UI_DEV_SETUP, &usetup);
 	ioctl(outfd, UI_DEV_CREATE);
 
-	ret = rescan_devices(head);
-	if(ret)
-		return 1;
+	while(ret == 0)
+	{
+		ret = rescan_devices(head);
+		sleep(10);
+	}
 
-	while(1)
-		sleep(10); // rescanning goes here
-
-	return 0;
+	return ret;
 }
