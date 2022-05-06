@@ -1,2 +1,2 @@
 default:
-	gcc main.c -o rinputer2 -O2 -g -lpthread -Wall -Wextra
+	$(CROSS_COMPILE)$(CC) main.c -o rinputer2 $(CFLAGS) -lpthread -Wall -Wextra
