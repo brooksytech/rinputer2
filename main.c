@@ -50,6 +50,8 @@ void emit(int type, int code, int value)
 void emit_abs(signed int min, signed int max, int code, int value)
 {
 	int newval = map(value, min, max, abs_bot, abs_top);
+	if(newval < 128 && newval > -128) // crude deadzones
+		return;
 	emit(EV_ABS, code, newval);
 }
 
