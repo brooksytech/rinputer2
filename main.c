@@ -74,8 +74,8 @@ void emit_abs(signed int min, signed int max, int code, int value)
 void *worker(void *data)
 {
 	struct rinputer_device *my_device = (struct rinputer_device*)data;
-	int min = 0; // to be filled in later
-	int max = 0;
+	int min[ABS_RZ];
+	int max[ABS_RZ];
 
 	// we only do gamepaddish devices, sort out everything else
 	int useful = 0;
@@ -114,10 +114,14 @@ void *worker(void *data)
 						useful = 1;
 
 					struct input_absinfo tmp;
-					ioctl(my_device->infd, EVIOCGABS(ABS_X), &tmp);
+					for(int tmp_code = ABS_X; tmp_code < ABS_RZ; tmp_code++)
+					{
+						if(ioctl(my_device->infd, EVIOCGABS(tmp_code), &tmp) < 0)
+							continue;
 
-					min = tmp.minimum;
-					max = tmp.maximum;
+						min[tmp_code] = tmp.minimum;
+						max[tmp_code] = tmp.maximum;
+					}
 
 					break;
 			}
@@ -146,7 +150,7 @@ void *worker(void *data)
 			for(i = 0; i < rd / sizeof(struct input_event) * 4; i++)
 			{
 				if(ev[i].type == EV_ABS)
-					emit_abs(min, max, ev[i].code, ev[i].value);
+					emit_abs(min[ev[i].code], max[ev[i].code], ev[i].code, ev[i].value);
 				else
 					emit(ev[i].type, ev[i].code, ev[i].value);
 			}
