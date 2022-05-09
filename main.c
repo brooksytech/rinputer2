@@ -16,6 +16,9 @@ int outfd = -1;
 static int abs_top = 1024;
 static int abs_bot = -1024;
 
+pthread_mutex_t	outfd_mutex;
+pthread_mutexattr_t attr;
+
 struct rinputer_device
 {
 	char *path;
@@ -44,7 +47,10 @@ void emit(int type, int code, int value)
 	ev.time.tv_sec = 0;
 	ev.time.tv_usec = 0;
 
-	write(outfd, &ev, sizeof(ev));
+	pthread_mutex_lock(&outfd_mutex);
+	if(write(outfd, &ev, sizeof(ev)) < 0)
+		perror("Failed writing input event");
+	pthread_mutex_unlock(&outfd_mutex);
 }
 
 void emit_abs(signed int min, signed int max, int code, int value)
@@ -211,6 +217,10 @@ int main(void)
 	struct rinputer_device *head = malloc(sizeof(struct rinputer_device));
 	head->next = 0;
 
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	pthread_mutex_init(&outfd_mutex, &attr);
+
 	outfd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
 	if(outfd < 0)
 		perror("Error opening /dev/uinput");
@@ -262,6 +272,8 @@ int main(void)
 		ret = rescan_devices(head);
 		sleep(10);
 	}
+
+	pthread_mutex_destroy(&outfd_mutex);
 
 	return ret;
 }
