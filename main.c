@@ -10,9 +10,11 @@
 #include <pthread.h>
 #include <dirent.h>
 #include <errno.h>
+#include <stdbool.h>
 
 int outfd = -1;
 
+bool is_in_deadzone[ABS_RY];
 static int abs_top = 1024;
 static int abs_bot = -1024;
 
@@ -56,8 +58,16 @@ void emit(int type, int code, int value)
 void emit_abs(signed int min, signed int max, int code, int value)
 {
 	int newval = map(value, min, max, abs_bot, abs_top);
-	if(newval < 128 && newval > -128) // crude deadzones
+	if(newval < 64 && newval > -64)
+	{
+		if(is_in_deadzone[code])
+			return;
+		else
+			is_in_deadzone[code] = 1;
+		emit(EV_ABS, code, 0);
 		return;
+	}
+	is_in_deadzone[code] = 0;
 	emit(EV_ABS, code, newval);
 }
 
@@ -272,7 +282,7 @@ int main(void)
 		ret = rescan_devices(head);
 		sleep(10);
 	}
-
+	
 	pthread_mutex_destroy(&outfd_mutex);
 
 	return ret;
