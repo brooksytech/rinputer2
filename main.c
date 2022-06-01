@@ -74,8 +74,8 @@ void emit_abs(signed int min, signed int max, int code, int value)
 void *worker(void *data)
 {
 	struct rinputer_device *my_device = (struct rinputer_device*)data;
-	int min[ABS_RZ];
-	int max[ABS_RZ];
+	int min[ABS_HAT3Y];
+	int max[ABS_HAT3Y];
 
 	// we only do gamepaddish devices, sort out everything else
 	int useful = 0;
@@ -114,7 +114,7 @@ void *worker(void *data)
 						useful = 1;
 
 					struct input_absinfo tmp;
-					for(int tmp_code = ABS_X; tmp_code < ABS_RZ; tmp_code++)
+					for(int tmp_code = ABS_X; tmp_code < ABS_HAT3Y; tmp_code++)
 					{
 						if(ioctl(my_device->infd, EVIOCGABS(tmp_code), &tmp) < 0)
 							continue;
@@ -150,7 +150,24 @@ void *worker(void *data)
 			for(i = 0; i < rd / sizeof(struct input_event) * 4; i++)
 			{
 				if(ev[i].type == EV_ABS)
-					emit_abs(min[ev[i].code], max[ev[i].code], ev[i].code, ev[i].value);
+				{
+					switch(ev[i].code)
+					{
+					case ABS_RZ:
+						// crudely convert min - max into 0-1
+						emit(EV_KEY, BTN_TR2, !!map(ev[i].value, min[ev[i].code], max[ev[i].code], 0, 1));
+						emit_abs(min[ev[i].code], max[ev[i].code], ev[i].code, ev[i].value);
+						break;
+					case ABS_Z:
+						// crudely convert min - max into 0-1
+						emit(EV_KEY, BTN_TL2, !!map(ev[i].value, min[ev[i].code], max[ev[i].code], 0, 1));
+						emit_abs(min[ev[i].code], max[ev[i].code], ev[i].code, ev[i].value);
+						break;
+					default:
+						emit_abs(min[ev[i].code], max[ev[i].code], ev[i].code, ev[i].value);
+
+					}
+				}
 				else
 					emit(ev[i].type, ev[i].code, ev[i].value);
 			}
