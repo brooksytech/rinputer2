@@ -15,8 +15,11 @@
 int outfd = -1;
 
 bool is_in_deadzone[ABS_RY];
-static int abs_top = 1024;
-static int abs_bot = -1024;
+static int analog_top = 1024;
+static int analog_bot = -1024;
+
+static int trigger_top = 256;
+static int trigger_bot = 0;
 
 pthread_mutex_t	outfd_mutex;
 pthread_mutexattr_t attr;
@@ -57,8 +60,25 @@ void emit(int type, int code, int value)
 
 void emit_abs(signed int min, signed int max, int code, int value)
 {
-	int newval = map(value, min, max, abs_bot, abs_top);
-	if(newval < 64 && newval > -64)
+	int top, bot, newval;
+
+	switch(code)
+	{
+	case ABS_X:
+	case ABS_Y:
+	case ABS_RX:
+	case ABS_RY:
+		top = analog_top;
+		bot = analog_bot;
+		break;
+	case ABS_Z:
+	case ABS_RZ:
+		top = trigger_top;
+		bot = trigger_bot;
+		break;
+	}
+	newval = map(value, min, max, bot, top);
+	if(newval < (top - bot)/128 && newval > -1 * (top - bot)/128)
 	{
 		if(is_in_deadzone[code])
 			return;
@@ -228,14 +248,31 @@ int rescan_devices(struct rinputer_device *head)
 
 void setup_abs(int fd, unsigned int chan)
 {
-	ioctl(fd, UI_SET_ABSBIT, chan);
+	int top, bot;
 
+	switch(chan)
+	{
+	case ABS_X:
+	case ABS_Y:
+	case ABS_RX:
+	case ABS_RY:
+		top = analog_top;
+		bot = analog_bot;
+		break;
+	case ABS_Z:
+	case ABS_RZ:
+		top = trigger_top;
+		bot = trigger_bot;
+		break;
+	}
+
+	ioctl(fd, UI_SET_ABSBIT, chan);
 	struct uinput_abs_setup tmp =
 	{
 		.code = chan,
 		.absinfo = {
-			.minimum = abs_bot,
-			.maximum = abs_top
+			.minimum = bot,
+			.maximum = top
 		}
 	};
 
@@ -287,6 +324,9 @@ int main(void)
 	setup_abs(outfd, ABS_Y);
 	setup_abs(outfd, ABS_RX);
 	setup_abs(outfd, ABS_RY);
+
+	setup_abs(outfd, ABS_Z);
+	setup_abs(outfd, ABS_RZ);
 
 	// maybe we should pretend to be xbox gamepad?
 	memset(&usetup, 0, sizeof(usetup));
