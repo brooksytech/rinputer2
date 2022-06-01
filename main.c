@@ -239,6 +239,10 @@ int rescan_devices(struct rinputer_device *head)
 		// let's not make a loop
 		if(strncmp("Rinputer", name, 8) == 0)
 			continue;
+		// ignore steam-created controllers
+		// they have this name, with a digit at the end
+		if(strncmp("Microsoft X-Box 360 pad ", name, 24) == 0)
+			continue;
 
 		tmpdev = calloc(1, sizeof(struct rinputer_device));
 		tmpdev->path = malloc(strlen(dev) + 1);
@@ -309,10 +313,10 @@ int main(void)
 
 	ioctl(outfd, UI_SET_EVBIT, EV_KEY);
 
-	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_UP);	// dpad up
-	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_DOWN);	// dpad down
-	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_LEFT);	// dpad left
-	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_RIGHT);	// dpad right
+	//ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_UP);	// dpad up
+	//ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_DOWN);	// dpad down
+	//ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_LEFT);	// dpad left
+	//ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_RIGHT);	// dpad right
 
 	ioctl(outfd, UI_SET_KEYBIT, BTN_NORTH);		// x
 	ioctl(outfd, UI_SET_KEYBIT, BTN_SOUTH);		// b
