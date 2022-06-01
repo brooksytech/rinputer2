@@ -21,6 +21,9 @@ static int analog_bot = -1024;
 static int trigger_top = 256;
 static int trigger_bot = 0;
 
+static int hat_top = 1;
+static int hat_bot = -1;
+
 pthread_mutex_t	outfd_mutex;
 pthread_mutexattr_t attr;
 
@@ -75,6 +78,11 @@ void emit_abs(signed int min, signed int max, int code, int value)
 	case ABS_RZ:
 		top = trigger_top;
 		bot = trigger_bot;
+		break;
+	case ABS_HAT0X:
+	case ABS_HAT0Y:
+		top = hat_top;
+		bot = hat_bot;
 		break;
 	}
 	newval = map(value, min, max, bot, top);
@@ -158,7 +166,6 @@ void *worker(void *data)
 	else
 		goto out;
 
-
 	int rd = 0;
 	int i = 0;
 	struct input_event ev[4];
@@ -185,7 +192,7 @@ void *worker(void *data)
 						break;
 					default:
 						emit_abs(min[ev[i].code], max[ev[i].code], ev[i].code, ev[i].value);
-
+						break;
 					}
 				}
 				else
@@ -264,6 +271,11 @@ void setup_abs(int fd, unsigned int chan)
 		top = trigger_top;
 		bot = trigger_bot;
 		break;
+	case ABS_HAT0X:
+	case ABS_HAT0Y:
+		top = hat_top;
+		bot = hat_bot;
+		break;
 	}
 
 	ioctl(fd, UI_SET_ABSBIT, chan);
@@ -320,13 +332,19 @@ int main(void)
 
 	ioctl(outfd, UI_SET_EVBIT, EV_ABS);
 
+	// analogs
 	setup_abs(outfd, ABS_X);
 	setup_abs(outfd, ABS_Y);
 	setup_abs(outfd, ABS_RX);
 	setup_abs(outfd, ABS_RY);
 
+	// triggers
 	setup_abs(outfd, ABS_Z);
 	setup_abs(outfd, ABS_RZ);
+
+	// dpad
+	setup_abs(outfd, ABS_HAT0X);
+	setup_abs(outfd, ABS_HAT0Y);
 
 	// maybe we should pretend to be xbox gamepad?
 	memset(&usetup, 0, sizeof(usetup));
