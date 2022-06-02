@@ -135,6 +135,9 @@ void *worker(void *data)
 					// anyway
 					if(codes[BTN_TOUCH / 8])
 						touchscreen = 1;
+
+					if(codes[BTN_MODE / 8]) // rbinder
+						useful = 1;
 					break;
 				case EV_ABS:
 					ioctl(my_device->infd, EVIOCGBIT(EV_ABS, sizeof(codes)), &codes);
