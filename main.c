@@ -361,7 +361,7 @@ int main(void)
 	usetup.id.bustype = BUS_USB;
 	usetup.id.vendor = 0x1234;
 	usetup.id.product = 0x5678;
-	strcpy(usetup.name, "Microsoft X-Box 360 pad");
+	strcpy(usetup.name, "Rinputer");
 
 	ioctl(outfd, UI_DEV_SETUP, &usetup);
 	ioctl(outfd, UI_DEV_CREATE);
