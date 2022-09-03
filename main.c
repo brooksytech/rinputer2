@@ -332,6 +332,9 @@ int main(void)
 	ioctl(outfd, UI_SET_KEYBIT, BTN_TR2);		// L2
 	ioctl(outfd, UI_SET_KEYBIT, BTN_TL2);		// R2
 
+	ioctl(outfd, UI_SET_KEYBIT, BTN_THUMBL);		// L3
+	ioctl(outfd, UI_SET_KEYBIT, BTN_THUMBR);		// R3
+	
 	ioctl(outfd, UI_SET_KEYBIT, BTN_SELECT);
 	ioctl(outfd, UI_SET_KEYBIT, BTN_START);
 
@@ -358,7 +361,7 @@ int main(void)
 	usetup.id.bustype = BUS_USB;
 	usetup.id.vendor = 0x1234;
 	usetup.id.product = 0x5678;
-	strcpy(usetup.name, "Rinputer");
+	strcpy(usetup.name, "Microsoft X-Box 360 pad");
 
 	ioctl(outfd, UI_DEV_SETUP, &usetup);
 	ioctl(outfd, UI_DEV_CREATE);
