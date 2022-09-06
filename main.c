@@ -359,9 +359,9 @@ int main(void)
 	// maybe we should pretend to be xbox gamepad?
 	memset(&usetup, 0, sizeof(usetup));
 	usetup.id.bustype = BUS_USB;
-	usetup.id.vendor = 0x1234;
-	usetup.id.product = 0x5678;
-	strcpy(usetup.name, "Rinputer");
+	usetup.id.vendor = 0x1118;
+	usetup.id.product = 0x654;
+	strcpy(usetup.name, "Microsoft X-Box 360 pad");
 
 	ioctl(outfd, UI_DEV_SETUP, &usetup);
 	ioctl(outfd, UI_DEV_CREATE);
