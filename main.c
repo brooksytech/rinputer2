@@ -244,7 +244,7 @@ int rescan_devices(struct rinputer_device *head)
 			continue;
 		// ignore steam-created controllers
 		// they have this name, with a digit at the end
-		if(strncmp("Microsoft X-Box 360 pad ", name, 24) == 0)
+		if(strncmp("Microsoft X-Box 360 pad", name, 24) == 0)
 			continue;
 
 		tmpdev = calloc(1, sizeof(struct rinputer_device));
