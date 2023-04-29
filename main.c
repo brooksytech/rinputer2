@@ -316,10 +316,10 @@ int main(void)
 
 	ioctl(outfd, UI_SET_EVBIT, EV_KEY);
 
-	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_UP);	// dpad up
-	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_DOWN);	// dpad down
-	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_LEFT);	// dpad left
-	ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_RIGHT);	// dpad right
+	//ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_UP);	// dpad up
+	//ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_DOWN);	// dpad down
+	//ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_LEFT);	// dpad left
+	//ioctl(outfd, UI_SET_KEYBIT, BTN_DPAD_RIGHT);	// dpad right
 
 	ioctl(outfd, UI_SET_KEYBIT, BTN_NORTH);		// x
 	ioctl(outfd, UI_SET_KEYBIT, BTN_SOUTH);		// b
@@ -353,8 +353,8 @@ int main(void)
 	setup_abs(outfd, ABS_RZ);
 
 	// dpad
-	//setup_abs(outfd, ABS_HAT0X);
-	//setup_abs(outfd, ABS_HAT0Y);
+	setup_abs(outfd, ABS_HAT0X);
+	setup_abs(outfd, ABS_HAT0Y);
 
 	// maybe we should pretend to be xbox gamepad?
 	memset(&usetup, 0, sizeof(usetup));
